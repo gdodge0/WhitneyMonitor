@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1
+
+FROM python:3.12.7-bookworm
+
+WORKDIR /python-docker
+
+# Install dependencies
+RUN apt-get update && apt-get install -y wget gnupg curl ca-certificates \
+    && apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libx11-xcb1 libxcomposite1 \
+       libxdamage1 libxrandr2 libgbm1 libgtk-3-0 libasound2 libxshmfence1 libxss1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && \
+    apt-get install -y \
+        libgl1-mesa-dri libgl1-mesa-glx libegl1 libgles2 mesa-utils \
+        libxrender1 libxkbcommon-x11-0 xvfb
+
+COPY requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt
+
+# Install Playwright browsers
+RUN playwright install --with-deps
+
+COPY . .
+
+CMD ["celery", "-A", "web.celery", "worker", "--max-tasks-per-child", "1", "-l", "info", "-c", "1"]

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Whitney Monitor</title>
+  <style>
+    :root {
+      --brand: #0060df;
+      --text-dark: #1a1a1a;
+      --text-light: #54667a;
+      --bg: #f2f5fa;
+      --surface: #ffffff;
+      --radius: 0.75rem;
+      --shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Reset & typography */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      color: var(--text-dark);
+      background: var(--bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout */
+    .container { max-width: 720px; margin: 4rem auto 6rem; padding: 0 1.25rem; }
+    .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 2rem 2rem 2.5rem; }
+
+    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--brand); text-align: center; }
+    p.lead { font-size: 1.05rem; color: var(--text-light); text-align: center; margin-bottom: 2rem; }
+
+    /* Actions */
+    .actions { margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn { padding: 0.65rem 1.5rem; border-radius: var(--radius); font-weight: 600; cursor: pointer; text-decoration: none; transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; display: inline-block; }
+    .btn-primary { background: var(--brand); color: #fff; box-shadow: var(--shadow); }
+    .btn-primary:hover { opacity: 0.9; }
+
+    /* Modal */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease; z-index: 1000; }
+    .modal-backdrop.show { opacity: 1; visibility: visible; }
+    .modal { background: var(--surface); border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 400px; box-shadow: var(--shadow); position: relative; }
+    .modal h2 { margin-bottom: 1.25rem; color: var(--brand); text-align: center; }
+    .modal label { display: block; margin-bottom: 0.35rem; font-weight: 600; }
+    .modal input { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #d1dce5; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.95rem; }
+    .modal .btn-close { position: absolute; top: 0.75rem; right: 0.75rem; background: transparent; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-light); }
+    .modal .btn-submit { width: 100%; text-align: center; }
+
+    /* Loading bar */
+    .progress-container { width: 100%; height: 0.55rem; background: #d1dce5; border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; display: none; }
+    .progress-bar { height: 100%; width: 0%; background: var(--brand); transition: width 0.2s ease; }
+
+    /* Centered modal content */
+    .modal-centered { text-align: center; }
+    .modal-centered p { margin-bottom: 1.5rem; font-size: 1rem; }
+
+    /* Dark mode tweaks */
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#121921; --surface:#17212b; --text-dark:#e8e8e8; --text-light:#8ca3b6; --shadow:0 6px 20px rgba(0,0,0,0.45); }
+      .modal input { background:#10161d; border-color:#26323f; color:var(--text-dark); }
+      .progress-container { background:#26323f; }
+    }
+
+    /* Card flex */
+    .card-content { display: flex; flex-direction: column; gap: 2rem; align-items: center; }
+    .image-content img { max-width: 100%; height: auto; border-radius: var(--radius); }
+    @media (min-width: 600px) {
+      .card-content { flex-direction: row; justify-content: space-between; align-items: center; }
+      .text-content { flex: 1; padding-right: 1rem; }
+      .image-content { flex: 1; max-width: 300px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <article class="card" aria-labelledby="title">
+      <div class="card-content">
+        <div class="text-content">
+          <h1 id="title">whitney.internal</h1>
+          <p class="lead">This internal API interfaces with <em>Recreation.gov</em> to streamline Mt. Whitney permit reservations. Access is restricted to authorized project members only.</p>
+          <div class="actions"><a href="#" class="btn btn-primary btn-register">Register</a></div>
+        </div>
+        <div class="image-content"><img src="https://upload.wikimedia.org/wikipedia/commons/f/f9/Mount_Whitney_2003-03-25.jpg" alt="Mount Whitney" /></div>
+      </div>
+    </article>
+  </main>
+
+  <!-- Register Modal -->
+  <div id="register-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="register-title">
+    <div class="modal" tabindex="-1">
+      <button class="btn-close" aria-label="Close" id="modal-close">×</button>
+      <h2 id="register-title">Register Rec.gov Account</h2>
+      <form id="register-form">
+        <label for="reg-email">Rec.gov email</label>
+        <input type="email" id="reg-email" name="reg-email" placeholder="you@example.com" required />
+        <label for="reg-password">Rec.gov password</label>
+        <input type="password" id="reg-password" name="reg-password" placeholder="••••••••" required />
+        <div class="progress-container" id="progress-container"><div class="progress-bar" id="progress-bar"></div></div>
+        <button type="submit" class="btn btn-primary btn-submit" id="btn-validate">Validate</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div id="success-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="success-title">
+    <div class="modal" tabindex="-1">
+      <button class="btn-close" aria-label="Close" id="success-close">×</button>
+      <div class="modal-centered">
+        <h2 id="success-title">Validation Complete</h2>
+        <p>Your Recreation.gov credentials have been successfully verified. You can now use this site's "Add to cart" feature.</p>
+        <button class="btn btn-primary" id="success-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Failure Modal -->
+  <div id="failure-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="failure-title">
+    <div class="modal" tabindex="-1">
+      <button class="btn-close" aria-label="Close" id="failure-close">×</button>
+      <div class="modal-centered">
+        <h2 id="failure-title">Validation Failed</h2>
+        <p>We couldn't verify your Recreation.gov credentials. Please double‑check and try again.</p>
+        <button class="btn btn-primary" id="failure-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ------------- CONFIG ------------- */
+    const ENV = 'prod'; // 'test' | 'prod'
+
+    /* ------------- ELEMENTS ------------- */
+    const registerBtn   = document.querySelector('.btn-register');
+    const modalBackdrop = document.getElementById('register-modal');
+    const closeBtn      = document.getElementById('modal-close');
+    const registerForm  = document.getElementById('register-form');
+    const progressBar   = document.getElementById('progress-bar');
+    const progressWrap  = document.getElementById('progress-container');
+
+    const successModal  = document.getElementById('success-modal');
+    const successClose  = document.getElementById('success-close');
+    const successOk     = document.getElementById('success-ok');
+
+    const failureModal  = document.getElementById('failure-modal');
+    const failureClose  = document.getElementById('failure-close');
+    const failureOk     = document.getElementById('failure-ok');
+
+    const regEmail     = document.getElementById('reg-email');
+    const regPassword  = document.getElementById('reg-password');
+
+    /* ------------- COOKIE HELPERS ------------- */
+    function setCookie(name, value, days = 365) {
+      const expires = new Date(Date.now() + days * 864e5).toUTCString();
+      const secureAttr = location.protocol === 'https:' ? 'Secure; ' : '';
+      document.cookie = `${name}=${encodeURIComponent(value)}; ${secureAttr}SameSite=Strict; Path=/; Expires=${expires}`;
+    }
+
+    function getCookie(name) {
+      const cookie = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+      return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
+    }
+
+    function clearProgress() {
+      progressBar.style.width = '0%';
+      progressWrap.style.display = 'none';
+    }
+
+    /* ------------- MODAL UTILS ------------- */
+    function openModal(backdrop) {
+      backdrop.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(backdrop) {
+      backdrop.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    /* ------------- VALIDATION ------------- */
+    const fakeValidate = () => new Promise(res => setTimeout(res, 5000 + Math.random() * 5000));
+
+    async function realValidate(username, password) {
+      const response = await fetch('/api/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (!response.ok) throw new Error('Network error');
+      return response.json();
+    }
+
+    async function handleValidation(ev) {
+      ev.preventDefault();
+
+      progressWrap.style.display = 'block';
+      progressBar.style.width = '0%';
+
+      let progress = 0;
+      const tick = 150;
+      const increment = 100 / (7000 / tick);
+      const interval = setInterval(() => {
+        progress = Math.min(progress + increment, 98);
+        progressBar.style.width = progress + '%';
+      }, tick);
+
+      const username = regEmail.value.trim();
+      const password = regPassword.value;
+
+      let success = false;
+      try {
+        if (ENV === 'test') {
+          await fakeValidate();
+          success = Math.random() >= 0.5;
+        } else {
+          const data = await realValidate(username, password);
+          success = !!data.success;
+        }
+      } catch (_) {
+        success = false;
+      }
+
+      clearInterval(interval);
+      progressBar.style.width = '100%';
+
+      setTimeout(() => {
+        closeModal(modalBackdrop);
+        clearProgress();
+        registerForm.reset();
+
+        if (success) {
+          openModal(successModal);
+        } else {
+          openModal(failureModal);
+        }
+      }, 400);
+    }
+
+    /* ------------- INIT & EVENT HANDLERS ------------- */
+    function preloadUsername() {
+      const saved = getCookie('rec_username');
+      regEmail.value = saved || '';
+      regPassword.value = '';
+    }
+
+    registerBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      preloadUsername();
+      clearProgress();
+      openModal(modalBackdrop);
+    });
+
+    closeBtn.addEventListener('click', () => closeModal(modalBackdrop));
+    modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(modalBackdrop); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(modalBackdrop); });
+
+    registerForm.addEventListener('submit', handleValidation);
+
+    successClose.addEventListener('click', () => closeModal(successModal));
+    successOk.addEventListener('click', () => closeModal(successModal));
+    successModal.addEventListener('click', (e) => { if (e.target === successModal) closeModal(successModal); });
+
+    failureClose.addEventListener('click', () => closeModal(failureModal));
+    failureOk.addEventListener('click', () => closeModal(failureModal));
+    failureModal.addEventListener('click', (e) => { if (e.target === failureModal) closeModal(failureModal); });
+
+    // Preload username on initial load so autofill works even before opening modal once.
+    preloadUsername();
+  </script>
+</body>
+</html>

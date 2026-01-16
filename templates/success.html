@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Successfully added to cart</title>
+  <style>
+    :root {
+      --brand: #0060df;
+      --text-dark: #1a1a1a;
+      --text-light: #54667a;
+      --bg: #f2f5fa;
+      --surface: #ffffff;
+      --radius: 0.75rem;
+      --shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Reset & typography */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      color: var(--text-dark);
+      background: var(--bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 720px;
+      margin: 4rem auto 6rem;
+      padding: 0 1.25rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2rem 2rem 2.5rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: var(--brand);
+      text-align: center;
+    }
+
+    p.lead {
+      font-size: 1.05rem;
+      color: var(--text-light);
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    /* Stepper */
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .step-number {
+      flex-shrink: 0;
+      background: var(--brand);
+      color: #fff;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.15rem;
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    .step-content h3 {
+      font-size: 1.25rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .step-content p {
+      color: var(--text-light);
+      font-size: 0.95rem;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      font-size: 0.85rem;
+      color: var(--text-light);
+    }
+
+    /* Responsive tweaks */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121921;
+        --surface: #17212b;
+        --text-dark: #e8e8e8;
+        --text-light: #8ca3b6;
+        --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+      }
+      .step-number {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <article class="card" aria-labelledby="title">
+      <h1 id="title">Success - Sign in to Continue</h1>
+      <p class="lead">
+        Follow these quick steps to access our group's recreation.gov account with the provided credentials and
+          confirm the permit waiting for you in your cart. <strong>You have 15 minutes to finalize the checkout process.</strong>
+      </p>
+
+      <section>
+        <div class="step" aria-label="Step 1">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Go to <em>Recreation.gov</em></h3>
+            <p>
+              Open your browser and navigate to
+              <a href="https://www.recreation.gov" target="_blank" rel="noopener noreferrer">recreation.gov</a>.
+              On desktop, the <strong>Sign In</strong> button sits in the upper‑right corner. On mobile, open the
+              hamburger menu to locate it.
+            </p>
+          </div>
+        </div>
+
+        <div class="step" aria-label="Step 2">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Enter Credentials</h3>
+            <p>
+              In the sign‑in modal, enter your username and password then click <strong>Sign In</strong>. If prompted to update your password or verify your email, you can
+              safely skip or postpone these steps.
+            </p>
+          </div>
+        </div>
+
+        <div class="step" aria-label="Step 3">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Open Your Cart</h3>
+            <p>
+              Once logged in, look for the <strong>cart icon</strong> — again, it's at the top‑right on desktop (or inside
+              the mobile menu). Click or tap the icon to open your cart.
+            </p>
+          </div>
+        </div>
+
+        <div class="step" aria-label="Step 4">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h3>Review the Item Waiting for You</h3>
+            <p>
+              You should see at least one reservation or permit already in your cart. Double‑check the details, and when
+              you're ready, click <strong>Proceed to Checkout</strong> or <strong>Complete Reservation</strong> to finalize.
+            </p>
+          </div>
+        </div>
+      </section>
+    </article>
+  </main>
+</body>
+</html>

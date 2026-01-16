@@ -1,0 +1,10 @@
+httpx~=0.28.1
+dotenv~=0.9.9
+python-dotenv~=1.1.0
+Flask~=3.1.0
+celery~=5.5.2
+playwright~=1.52.0
+setuptools~=80.1.0
+waitress~=3.0.2
+redis~=6.0.0
+cryptography~=44.0.3
