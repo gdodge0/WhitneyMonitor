@@ -23,4 +23,4 @@ RUN pip3 install -r requirements.txt
 RUN playwright install --with-deps
 
 COPY . .
-CMD ["celery", "-A", "celery_worker.celery", "worker", "-l", "info", "-c", "2"]
+CMD ["celery", "-A", "celery_worker.celery", "worker", "-Q", "Inyo.Harvester", "-l", "info", "-c", "2"]

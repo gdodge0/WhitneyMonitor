@@ -1,60 +1,18 @@
 # Environment and secrets
 .env
 .env.*
-!.env.example
-!sample.env
 
 # Python
+.venv
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
-.venv/
-venv/
-ENV/
 
 # IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
+.idea
 
-# Data and cache
-data/*.p
-data/*.pickle
-data/*.db
-*.sqlite
-*.sqlite3
-
-# Logs
-*.log
-logs/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Playwright
-playwright/.cache/
-
-# Redis dump
-dump.rdb
+# Data
+/data
+/lib/check_redis.sh
+/lib/start_redis.sh
+conf.yaml
+conf.live.yaml

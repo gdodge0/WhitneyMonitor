@@ -79,8 +79,8 @@
     <article class="card" aria-labelledby="title">
       <div class="card-content">
         <div class="text-content">
-          <h1 id="title">whitney.internal</h1>
-          <p class="lead">This internal API interfaces with <em>Recreation.gov</em> to streamline Mt. Whitney permit reservations. Access is restricted to authorized project members only.</p>
+          <h1 id="title">Inyo ATC</h1>
+          <p class="lead">This internal API interfaces with <em>Recreation.gov</em> to streamline Inyo National Forest permit reservations. Access is restricted to authorized project members only.</p>
           <div class="actions"><a href="#" class="btn btn-primary btn-register">Register</a></div>
         </div>
         <div class="image-content"><img src="https://upload.wikimedia.org/wikipedia/commons/f/f9/Mount_Whitney_2003-03-25.jpg" alt="Mount Whitney" /></div>
@@ -182,11 +182,11 @@
     /* ------------- VALIDATION ------------- */
     const fakeValidate = () => new Promise(res => setTimeout(res, 5000 + Math.random() * 5000));
 
-    async function realValidate(username, password) {
-      const response = await fetch('/api/validate', {
+    async function realValidate(username, password, fingerprint) {
+      const response = await fetch('api/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password, fingerprint })
       });
       if (!response.ok) throw new Error('Network error');
       return response.json();
@@ -215,7 +215,8 @@
           await fakeValidate();
           success = Math.random() >= 0.5;
         } else {
-          const data = await realValidate(username, password);
+          const fingerprint = await getFingerprint();
+          const data = await realValidate(username, password, fingerprint);
           success = !!data.success;
         }
       } catch (_) {
@@ -236,6 +237,14 @@
           openModal(failureModal);
         }
       }, 400);
+    }
+
+    /* ------------- FINGERPRINT UTIL ------------- */
+    async function getFingerprint() {
+      const FingerprintJS = await import('/inyo/static/js/pack.js');
+      const fp = await FingerprintJS.load();
+      const result = await fp.get();
+      return result.visitorId;
     }
 
     /* ------------- INIT & EVENT HANDLERS ------------- */

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Statistics</title>
+  <style>
+    /* --- Re-use Core design tokens --- */
+    :root{
+      --brand:#0060df;   --text-dark:#1a1a1a; --text-light:#54667a;
+      --bg:#f2f5fa;      --surface:#ffffff;
+      --radius-sm:.5rem; --radius:.75rem;
+      --shadow:0 4px 12px rgba(0,0,0,.08);
+      --shadow-hover:0 6px 20px rgba(0,0,0,.12);
+      --transition:200ms cubic-bezier(.32,.72,.46,1.03);
+      --table-border:#d9e1ee;
+    }
+    @media(prefers-color-scheme:dark){
+      :root{
+        --bg:#121921;  --surface:#17212b;
+        --text-dark:#e8e8e8; --text-light:#8ca3b6;
+        --shadow:0 4px 12px rgba(0,0,0,.45);
+        --shadow-hover:0 6px 20px rgba(0,0,0,.5);
+        --table-border:#273143;
+      }
+    }
+
+    /* Reset & Type */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;
+      background:var(--bg); color:var(--text-dark); line-height:1.6; -webkit-font-smoothing:antialiased;
+      padding:2rem 1.25rem 4rem;
+    }
+    h1{font-size:2rem;margin-bottom:.75rem;color:var(--brand);text-align:center;}
+
+    /* Layout */
+    .filters{
+      display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;margin:1rem 0 2rem;
+    }
+    .filters label{display:flex;flex-direction:column;font-size:.875rem;color:var(--text-light);} 
+    .filters select{
+      padding:.5rem .75rem;border:1px solid var(--table-border);border-radius:var(--radius-sm);
+      background:var(--surface);color:inherit;
+    }
+    /* Match input appearance to selects for a unified look */
+    .filters input[type=number]{
+      padding:.5rem .75rem;border:1px solid var(--table-border);border-radius:var(--radius-sm);
+      background:var(--surface);color:inherit;width:6rem;
+    }
+    .filters button{
+      padding:.5rem 1rem;background:var(--brand);color:#fff;border:none;border-radius:var(--radius-sm);
+      cursor:pointer;font-weight:600;transition:background var(--transition);
+    }
+    .filters button:hover{background:#004ab5;}
+
+    table{
+      width:100%;border-collapse:collapse;margin:0 auto 2.5rem;max-width:720px;background:var(--surface);
+      border:1px solid var(--table-border);border-radius:var(--radius-sm);overflow:hidden;
+      box-shadow:var(--shadow);
+    }
+    th,td{padding:.75rem 1rem;text-align:left;border-bottom:1px solid var(--table-border);} 
+    th{background:rgba(0,0,0,.04);font-weight:600;} 
+    tbody tr:last-child td{border-bottom:none;}
+
+    .muted{color:var(--text-light);font-size:.875rem;text-align:center;margin:1.5rem 0;}
+
+    /* Pagination */
+    .pager{display:flex;justify-content:center;gap:.5rem;margin:.25rem 0 1rem;}
+    table.paginated{margin-bottom:.75rem;}
+    .pager button{
+      padding:.3rem .6rem;border:1px solid var(--table-border);background:var(--surface);color:inherit;border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem;
+    }
+    .pager button[disabled]{opacity:.4;cursor:default;}
+  </style>
+  <style>
+    /* Override default table width for heatmap */
+    table.heatmap{width:auto;}
+  </style>
+  <style>
+    /* Calendar grid styling */
+    .calendar-container{background:var(--surface);padding:.75rem;border:1px solid var(--table-border);border-radius:var(--radius-sm);box-shadow:var(--shadow);max-width:720px;margin:0 auto 1.5rem;}
+    .calendar-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
+    .calendar-nav button{padding:.25rem .6rem;border:1px solid var(--table-border);background:var(--surface);color:inherit;border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem;}
+    .calendar-header, .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:.25rem;}
+    .calendar-header div{text-align:center;font-size:.75rem;color:var(--text-light);}
+    .calendar-grid .day{position:relative;padding-top:100%;border:1px solid var(--table-border);border-radius:var(--radius-sm);overflow:hidden;background:rgba(0,0,0,.04);} /* default bg */
+    .calendar-grid .day.clickable{cursor:pointer;}
+    .calendar-grid .day.selected{outline:2px solid var(--brand);}
+    .calendar-grid .day span{position:absolute;font-size:.75rem;line-height:1;}
+    .calendar-grid .day .num{top:4px;left:4px;font-weight:600;}
+    .calendar-grid .day .cnt{bottom:4px;right:4px;}
+    .calendar-grid .empty{background:transparent;border:none;box-shadow:none;}
+  </style>
+  <style>
+    /* Responsive wrapper for heatmap to allow horizontal scrolling on small screens */
+    .heatmap-wrapper{
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch; /* smooth on iOS */
+    }
+    /* Ensure table is displayed as a single block inside the scroll container */
+    .heatmap-wrapper table{
+      margin:0 auto; /* keep centered when space allows */
+      width:max-content; /* prevent table from shrinking and enable scroll */
+    }
+  </style>
+</head>
+<body>
+  <h1>Statistics</h1>
+
+  <!-- Filter Bar -->
+  <form class="filters" method="get">
+    <label>
+      Monitor
+      <select name="source">
+        <option value="">Any</option>
+        {% for src in options.sources %}
+          <option value="{{ src }}" {% if filters.source == src %}selected{% endif %}>{{ src }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Item Name
+      <select name="name">
+        <option value="">Any</option>
+        {% for n in options.names %}
+          <option value="{{ n }}" {% if filters.name == n %}selected{% endif %}>{{ n }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Count Range
+      <div style="display:flex;gap:.25rem;align-items:center;">
+        <input type="number" name="count_min" placeholder="Min" value="{{ filters.count_min if filters.count_min is not none }}" min="0" step="1" />
+        <span style="font-size:1rem;">–</span>
+        <input type="number" name="count_max" placeholder="Max" value="{{ filters.count_max if filters.count_max is not none }}" min="0" step="1" />
+      </div>
+    </label>
+    <label>
+      Date Basis
+      <select name="date_mode">
+        <option value="entry" {% if filters.date_mode != 'detected' %}selected{% endif %}>Entry Date</option>
+        <option value="detected" {% if filters.date_mode == 'detected' %}selected{% endif %}>Detection Date</option>
+      </select>
+    </label>
+
+    <button type="submit">Apply</button>
+  </form>
+
+  <!-- Item Detection Counts (moved up) -->
+  {% if not filters.name %}
+  <section>
+    <h2 style="text-align:center;margin-bottom:.5rem;">Item Detections</h2>
+    {% if item_stats %}
+      <table aria-label="Item detections" class="paginated">
+        <thead>
+          <tr><th>Name</th><th>Code</th><th style="text-align:right;">Detections</th><th style="text-align:right;">% of Total Count</th></tr>
+        </thead>
+        <tbody>
+          {% for (name,code),det,pct in item_stats %}
+            <tr>
+              <td>{{ name }}</td>
+              <td>{{ code }}</td>
+              <td style="text-align:right;">{{ det }}</td>
+              <td style="text-align:right;">{{ '%.1f' % pct }}%</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="pager"></div>
+    {% else %}
+      <p class="muted">No items match the selected filters.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <!-- Monthly Calendar -->
+  <section id="calendar-section">
+    <h2 style="text-align:center;margin-bottom:.5rem;">Events by {{ 'Detection Date' if filters.date_mode == 'detected' else 'Entry Date' }}</h2>
+    <div class="calendar-container">
+      <div class="calendar-nav">
+        <button type="button" id="cal-prev">Prev</button>
+        <span id="cal-title" style="font-weight:600;"></span>
+        <button type="button" id="cal-next">Next</button>
+        <button type="button" id="cal-clear" style="margin-left:auto;display:none;">Clear</button>
+      </div>
+      <div class="calendar-header">
+        {% set dow_labels = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"] %}
+        {% for d in dow_labels %}
+          <div>{{ d }}</div>
+        {% endfor %}
+      </div>
+      <div id="calendar-grid" class="calendar-grid"></div>
+      <p class="muted" id="cal-empty" style="display:none;">No items this month.</p>
+    </div>
+  </section>
+
+  <!-- Embed items-by-date JSON for client-side calendar -->
+  <script id="items-json" type="application/json">{{ items_by_date | tojson }}</script>
+
+  <!-- Permit Count Value Distribution (%) -->
+  <section>
+    <h2 style="text-align:center;margin-bottom:.5rem;">Item Count Value Distribution (%)</h2>
+    {% if count_distribution %}
+      <table aria-label="Count distribution" class="paginated">
+        <thead>
+          <tr><th>Count Value</th><th style="text-align:right;">Percent</th></tr>
+        </thead>
+        <tbody>
+          {% for val,pct in count_distribution %}
+            <tr>
+              <td>{{ val }}</td>
+              <td style="text-align:right;">{{ '%.1f' % pct }}%</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="pager"></div>
+    {% else %}
+      <p class="muted">No data.</p>
+    {% endif %}
+  </section>
+
+  <!-- Time-of-Day / Day-of-Week Heatmap -->
+  <section>
+    <h2 style="text-align:center;margin-bottom:.5rem;">Event Distribution ({{ tz_label }})</h2>
+    {% if heatmap_max > 0 %}
+      <div class="heatmap-wrapper">
+        <table aria-label="Heatmap" class="heatmap" style="border-collapse:collapse;margin:0 auto;">
+        <thead>
+          <tr>
+            <th style="text-align:right;padding-right:.5rem;color:var(--text-light);"></th>
+            {% for h in range(24) %}
+              <th style="font-size:.75rem;padding:.25rem .3rem;color:var(--text-light);">{{ "%02d" % h }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% set dow_labels = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"] %}
+          {% for row in range(7) %}
+            <tr>
+              <th style="text-align:right;padding-right:.5rem;color:var(--text-light);">{{ dow_labels[row] }}</th>
+              {% for h in range(24) %}
+                {% set val = heatmap[row][h] %}
+                {% if heatmap_max > 0 %}
+                  {% set opacity = (val / heatmap_max)|float %}
+                {% else %}
+                  {% set opacity = 0 %}
+                {% endif %}
+                <td title="{{ val }}" style="width:22px;height:22px;background:rgba(0,96,223,{{ '%.2f' % opacity }});border:1px solid rgba(0,0,0,.1);"></td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    {% else %}
+      <p class="muted">No events to display heatmap.</p>
+    {% endif %}
+  </section>
+
+  <!-- Timezone detector: reload once with tz param -->
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has('tz')) {
+        try {
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+          params.set('tz', tz);
+          window.location.search = params.toString();
+        } catch (e) {
+          // no-op; fallback to UTC handled server-side
+        }
+      }
+    })();
+
+    /* Table pagination */
+    (function(){
+      function paginateTable(table, maxRows){
+        const tbody = table.tBodies[0];
+        if(!tbody) return;
+        const rows = Array.from(tbody.rows);
+        if(rows.length <= maxRows) return; // no need paginate
+
+        let current = 0;
+        const pager = table.nextElementSibling;
+        function render(){
+          rows.forEach((r,i)=>{r.style.display = (Math.floor(i/maxRows)===current)?'':'none';});
+          if(!pager) return;
+          pager.innerHTML='';
+          const totalPages = Math.ceil(rows.length/maxRows);
+          const prevBtn = document.createElement('button');
+          prevBtn.textContent='Prev';
+          prevBtn.disabled = current===0;
+          prevBtn.onclick=()=>{if(current>0){current--;render();}};
+          pager.appendChild(prevBtn);
+          const pageInfo = document.createElement('span');
+          pageInfo.textContent=(` ${current+1}/${totalPages} `);
+          pager.appendChild(pageInfo);
+          const nextBtn = document.createElement('button');
+          nextBtn.textContent='Next';
+          nextBtn.disabled = current>=totalPages-1;
+          nextBtn.onclick=()=>{if(current<totalPages-1){current++;render();}};
+          pager.appendChild(nextBtn);
+        }
+        render();
+      }
+      window.addEventListener('load',()=>{
+        document.querySelectorAll('table.paginated').forEach(t=>paginateTable(t,5));
+
+        /* Calendar builder */
+        const itemsList = JSON.parse(document.getElementById('items-json').textContent);
+        const selectedDate = "{{ filters.date or '' }}";
+        const itemsMap = {};
+        itemsList.forEach(([date,count])=>{itemsMap[date]=count;});
+
+        const dowStart = 1; // Monday
+        const gridEl = document.getElementById('calendar-grid');
+        const titleEl = document.getElementById('cal-title');
+        const emptyMsg = document.getElementById('cal-empty');
+        let current = new Date(); // today in client TZ
+        if (selectedDate) {
+          current = new Date(selectedDate);
+        }
+
+        function render(){
+          gridEl.innerHTML='';
+          const year=current.getFullYear();
+          const month=current.getMonth(); // 0-11
+          titleEl.textContent=current.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+
+          // Determine first Monday of calendar grid
+          const firstOfMonth=new Date(year,month,1);
+          const startDay=(firstOfMonth.getDay()+6)%7; // convert Sun=0 to Sun=6 vs Monday=0
+          const daysInMonth=new Date(year,month+1,0).getDate();
+
+          // Collect counts for month and compute max
+          let monthMax=0;
+          const countsByDay=[];
+          for(let d=1;d<=daysInMonth;d++){
+            const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const cnt=itemsMap[dateStr]||0;
+            countsByDay[d]=cnt;
+            if(cnt>monthMax) monthMax=cnt;
+          }
+
+          const totalCells=Math.ceil((startDay+daysInMonth)/7)*7;
+          for(let i=0;i<totalCells;i++){
+            const cell=document.createElement('div');
+            if(i<startDay || i>=startDay+daysInMonth){
+              cell.className='day empty';
+            }else{
+              const day=i-startDay+1;
+              const cnt=countsByDay[day];
+              const opacity=monthMax?cnt/monthMax:0;
+              cell.className='day';
+              cell.title=`${cnt} detections`;
+              cell.style.background=`rgba(0,96,223,${opacity.toFixed(2)})`;
+              const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+              if(cnt>0){
+                cell.classList.add('clickable');
+                if(dateStr===selectedDate){
+                  cell.classList.add('selected');
+                }
+                cell.addEventListener('click',()=>{
+                  const params = new URLSearchParams(window.location.search);
+                  if(dateStr===selectedDate){
+                    params.delete('date'); // toggle off
+                  }else{
+                    params.set('date', dateStr);
+                  }
+                  window.location.search = params.toString();
+                });
+              }
+              const numSpan=document.createElement('span');
+              numSpan.className='num';
+              numSpan.textContent=day;
+              const cntSpan=document.createElement('span');
+              cntSpan.className='cnt';
+              cntSpan.textContent=cnt;
+              cell.appendChild(numSpan);
+              cell.appendChild(cntSpan);
+            }
+            gridEl.appendChild(cell);
+          }
+          emptyMsg.style.display = monthMax===0 ? '' : 'none';
+        }
+
+        document.getElementById('cal-prev').addEventListener('click',()=>{
+          current.setMonth(current.getMonth()-1);
+          render();
+        });
+        document.getElementById('cal-next').addEventListener('click',()=>{
+          current.setMonth(current.getMonth()+1);
+          render();
+        });
+        render();
+
+        // Clear button handler
+        const clearBtn = document.getElementById('cal-clear');
+        const prevBtnNav = document.getElementById('cal-prev');
+        const nextBtnNav = document.getElementById('cal-next');
+
+        if(selectedDate){
+          // Hide navigation when specific day selected
+          if(prevBtnNav) prevBtnNav.style.display = 'none';
+          if(nextBtnNav) nextBtnNav.style.display = 'none';
+        }
+
+        if(clearBtn){
+          // Show button only when a date is selected
+          if(selectedDate){
+            clearBtn.style.display='inline-block';
+            clearBtn.style.marginLeft = '0';
+            const dummy = clearBtn.cloneNode(true);
+            dummy.removeAttribute('id');
+            dummy.style.visibility = 'hidden';
+            const calendarNav = document.querySelector('.calendar-nav');
+            calendarNav.insertBefore(dummy, titleEl);
+          }
+          clearBtn.addEventListener('click',()=>{
+            const params = new URLSearchParams(window.location.search);
+            params.delete('date');
+            window.location.search = params.toString();
+          });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

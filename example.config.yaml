@@ -1,0 +1,68 @@
+# example.config.yaml
+
+secret_key: "${SECRET_KEY:DEFAULT_USE_ENV_VAR}"
+IPC_key: "${IPC_KEY:DEFAULT_USE_ENV_VAR}"
+
+redis:
+  broker_url: "redis://localhost/0"
+  result_backend: "redis://localhost/1"
+  task_log_backend: "redis://localhost/2"
+
+sqlite:
+  path: "data/stats/sqlite.db"
+
+
+monitor:
+  providers:
+    - Whitney
+  whitney:
+    cooldown: 15 # seconds
+    api_endpoint: "https://www.recreation.gov/api/permitinyo/445860/availabilityv2"
+    data_dir: "data/whitney"
+    data_file: "dates.p"
+    permit_codes:
+      '166': "Overnight Permit (JM35)"
+      '406': "Day Permit (JM34.5)"
+    notifications:
+      providers:
+        - Discord
+      discord:
+        event_hook: ""      # Webhook for real-time event alerts
+        log_hook: ""        # Webhook for application logs
+        role_id: ~          # “~” = YAML null (no role ping)
+        enable_logs: true
+    date_ranges:
+      # enabled_days lists the weekdays (Mon → Sun) that are active
+      - start: "2025-05-20"
+        end: "2025-05-31"
+        enabled_days:
+          - Mon
+          - Tue
+          - Wed
+          - Thu
+          - Fri
+          - Sat
+          - Sun
+    tools:
+      - WhitneyATC
+      - Harvester
+    WhitneyATC:
+      name: "WhitneyATC"
+      url_prefix: "/whitney"
+      atc_validity_duration: 1800        # seconds (30 min)
+      max_permits: 5
+      redis_url: "redis://localhost/3"
+      features:
+        enable_account_validation: false
+        use_backup_credentials: false
+
+      backup_credentials:
+        username: ~
+        password: ~
+
+    Harvester: # required for Whitney ATC
+      name: "ReCaptcha Harvester"
+      url_prefix: "/whitney/api"
+
+service:
+  base_url: "http://127.0.0.1:8000"

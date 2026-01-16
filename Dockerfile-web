@@ -10,5 +10,4 @@ RUN pip3 install -r requirements.txt
 COPY . .
 
 EXPOSE 8080
-
-CMD ["waitress-serve", "web:app"]
+CMD ["gunicorn", "-w", "4", "--worker-class", "gevent", "--timeout", "0", "web:create_app()"]

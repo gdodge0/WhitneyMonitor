@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adding to Cart… | Inyo Monitor</title>
+  <style>
+    :root {
+      --brand:#0060df;--text-dark:#1a1a1a;--text-light:#54667a;
+      --bg:#f2f5fa;--surface:#ffffff;--radius:.75rem;
+      --shadow:0 6px 20px rgba(0,0,0,.06);
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;color:var(--text-dark);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+    .container{max-width:720px;margin:4rem auto 6rem;padding:0 1.25rem}
+    .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:2rem 2rem 2.5rem;margin-bottom:2rem}
+    h1{font-size:2rem;font-weight:700;margin-bottom:.75rem;color:var(--brand);text-align:center}
+    h2{font-size:1.25rem;font-weight:700;margin-bottom:1rem;color:var(--brand)}
+    p.lead{font-size:1.05rem;color:var(--text-light);text-align:center;margin-bottom:2rem}
+    .progress-container{width:100%;height:1.15rem;background:#d1dce5;border-radius:var(--radius);overflow:hidden;margin-bottom:1.25rem}
+    .progress-bar{height:100%;width:0;background:var(--brand);transition:width .15s cubic-bezier(.4,0,.2,1)}
+    .stage-label{text-align:center;font-weight:600;font-size:.95rem;color:var(--text-dark);margin-bottom:1.25rem}
+    .history-list{list-style:none;display:flex;flex-direction:column;gap:.75rem}
+    .history-item{display:flex;justify-content:space-between;align-items:center;background:var(--bg);border-radius:var(--radius);padding:.75rem 1rem;font-size:.95rem}
+    .history-item .name{font-weight:600;color:var(--text-dark)}
+    .history-item .timestamp{color:var(--text-light);font-size:.85rem}
+
+    /* --- Button styles --- */
+    .text-center{text-align:center}
+    .visit-btn{
+      display:inline-block;
+      margin-top:1rem;
+      font-weight:600;
+      background:var(--brand);
+      color:#fff;
+      padding:.75rem 1.5rem;
+      border-radius:var(--radius);
+      text-decoration:none;
+      box-shadow:var(--shadow);
+      transition:background .2s ease;
+    }
+    .visit-btn:hover{background:#004bb7}
+
+    @media (prefers-color-scheme:dark){
+      :root{--bg:#121921;--surface:#17212b;--text-dark:#e8e8e8;--text-light:#8ca3b6;--shadow:0 6px 20px rgba(0,0,0,.45)}
+      .progress-container{background:#26323f}
+      .history-item{background:#10161d}
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <!-- Active Transaction -->
+    <article class="card" aria-live="polite" aria-busy="true">
+      <h1>Adding to Cart…</h1>
+      <p class="lead">Hang tight while we reserve your permit. This usually finishes in under a minute.</p>
+      <div class="progress-container"><div class="progress-bar" id="progress-bar"></div></div>
+      <p class="stage-label" id="stage-label">Connecting…</p>
+    </article>
+
+    <!-- History -->
+    <article class="card">
+      <h2>Completed Transactions</h2>
+      <ul class="history-list" id="history-list"></ul>
+    </article>
+
+    <!-- Visit Recreation.gov button -->
+    <div class="text-center">
+      <a href="https://www.recreation.gov/" target="_blank" rel="noreferrer" class="visit-btn">
+        Visit Recreation.gov
+      </a>
+    </div>
+  </main>
+
+  <script type="module">
+    /* ------------- CONFIG ------------- */
+    const TOKEN_PARAM   = "token";      // query‑string param containing cart token
+    const STREAM_URL    = "api/stream"; // EventSource root
+    const MAX_HISTORY   = 5;            // show only the latest 5 entries
+
+    /* ------------- ELEMENTS ------------- */
+    const bar        = document.getElementById("progress-bar");
+    const stageLabel = document.getElementById("stage-label");
+    const historyUl  = document.getElementById("history-list");
+
+    /* ------------- HELPERS ------------- */
+    const qs = (name) => new URLSearchParams(location.search).get(name);
+
+    const saveHistoryEntry = (entry) => {
+      const list = JSON.parse(localStorage.getItem("whitney_history") || "[]");
+      list.unshift(entry);                // newest first
+      const trimmed = list.slice(0, MAX_HISTORY);
+      localStorage.setItem("whitney_history", JSON.stringify(trimmed));
+    };
+
+    const loadHistory = () => {
+      const list = JSON.parse(localStorage.getItem("whitney_history") || "[]")
+                    .slice(0, MAX_HISTORY); // already newest→oldest
+
+      // ensure storage stays trimmed
+      localStorage.setItem("whitney_history", JSON.stringify(list));
+
+      // render from oldest to newest while prepending → final DOM will be newest on top
+      list.slice().reverse().forEach(renderHistoryItem);
+    };
+
+    const renderHistoryItem = ({ name, ts }) => {
+      const li = document.createElement("li");
+      li.className = "history-item";
+      li.innerHTML = `
+        <span class="name">${name}</span>
+        <span class="timestamp">${new Date(ts).toLocaleString()}</span>`;
+      // prepend so newest is always on top
+      historyUl.insertBefore(li, historyUl.firstChild);
+    };
+
+    /* ------------- DOM TRIM ------------- */
+    const trimDomHistory = () => {
+      while (historyUl.children.length > MAX_HISTORY) {
+        historyUl.lastElementChild.remove();
+      }
+    };
+
+    /* ------------- UI UPDATE ------------- */
+    function updateUI(data) {
+      if (typeof data.percent === "number") {
+        bar.style.width = `${data.percent}%`;
+      }
+      stageLabel.textContent = data.stage || (data.done ? "Finished" : "Working…");
+
+      if (data.done) {
+        document.querySelector("[aria-busy]")?.setAttribute("aria-busy", "false");
+        const entry = { name: data.itemName || "Permit", ts: Date.now() };
+        saveHistoryEntry(entry);
+        renderHistoryItem(entry);
+        trimDomHistory();
+      }
+    }
+
+    /* ------------- SSE LOGIC ------------- */
+    function initSSE(txId) {
+      if (!txId) {
+        stageLabel.textContent = "No transaction id returned.";
+        return;
+      }
+
+      console.log("Connecting to SSE stream with txId:", txId);
+      const es = new EventSource(`${STREAM_URL}/${encodeURIComponent(txId)}`);
+
+      // unified handler for both default and custom event names
+      const handler = (e) => {
+        console.log("SSE raw payload:", e.data);
+        try {
+          const parsed = JSON.parse(e.data);
+          updateUI(parsed);
+          if (parsed.done) {
+            console.log("Stream signaled done — closing EventSource");
+            es.close();
+          }
+        } catch (err) {
+          console.error("Failed to parse SSE JSON payload:", err);
+        }
+      };
+
+      es.onmessage = handler;                   // default event type
+      es.addEventListener("progress", handler); // custom event type fallback
+
+      es.addEventListener("open", () => {
+        console.log("SSE connection opened");
+        stageLabel.textContent = "Connected…";
+      });
+
+      es.addEventListener("error", (evt) => {
+        console.error("SSE connection error", evt);
+        stageLabel.textContent = "Connection lost… retrying";
+      });
+    }
+
+    /* ------------- FingerprintJS ------------- */
+    const fpPromise = import("/inyo/static/js/pack.js").then((FingerprintJS) =>
+      FingerprintJS.load()
+    );
+
+    /* ------------- INIT ------------- */
+    (async function init() {
+      loadHistory();
+      trimDomHistory();
+
+      const token = qs(TOKEN_PARAM);
+      if (!token) {
+        stageLabel.textContent = "Missing cart token.";
+        return;
+      }
+
+      try {
+        const fp = await fpPromise.then((fp) => fp.get());
+        console.log("Fingerprint visitorId:", fp.visitorId);
+
+        const resp = await fetch("api/atc", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, fingerprint: fp.visitorId }),
+        });
+
+        if (!resp.ok) {
+          throw new Error(`Request failed: ${resp.status}`);
+        }
+
+        // read as text first so we can log the raw payload
+        const rawText = await resp.text();
+        console.log("POST /api/atc raw response:", rawText);
+
+        let txId;
+        try {
+          ({ txId } = JSON.parse(rawText));
+        } catch (err) {
+          console.error("Failed to parse /api/atc response as JSON:", err);
+          throw err;
+        }
+
+        console.log("Received txId:", txId);
+        initSSE(txId);
+      } catch (err) {
+        console.error("Initialization error:", err);
+        stageLabel.textContent = err.message ?? String(err);
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Watchtower</title>
+  <style>
+    /* ——— Design Tokens ——— */
+    :root{
+      --brand:#0060df;   --text-dark:#1a1a1a; --text-light:#54667a;
+      --bg:#f2f5fa;      --surface:#ffffff;
+      --radius-sm:.5rem; --radius:.75rem;
+      --shadow:0 4px 12px rgba(0,0,0,.08);
+      --shadow-hover:0 6px 20px rgba(0,0,0,.12);
+      --transition:200ms cubic-bezier(.32,.72,.46,1.03);
+    }
+    @media(prefers-color-scheme:dark){
+      :root{
+        --bg:#121921;  --surface:#17212b;
+        --text-dark:#e8e8e8; --text-light:#8ca3b6;
+        --shadow:0 4px 12px rgba(0,0,0,.45);
+        --shadow-hover:0 6px 20px rgba(0,0,0,.5);
+      }
+    }
+
+    /* ——— Reset & Type ——— */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;
+      background:var(--bg); color:var(--text-dark); line-height:1.6; -webkit-font-smoothing:antialiased;
+    }
+    h1,h2{font-weight:700;line-height:1.2;}
+    h1{font-size:2.4rem;margin-bottom:.5rem;color:var(--brand);text-align:center;}
+    p.lead{font-size:1.1rem;color:var(--text-light);text-align:center;margin:0 auto 2.5rem;max-width:52ch;}
+
+    /* ——— Layout ——— */
+    .container{max-width:1280px;margin:4rem auto 6rem;padding:0 1.25rem;}
+
+    .module-grid{
+      display:flex; flex-wrap:wrap; gap:2rem;
+      justify-content:center;
+    }
+
+    /* Card base width ↓ */
+    .card{
+      flex:0 1 calc(25% - 2rem); max-width:calc(25% - 2rem);
+      display:flex; flex-direction:column;
+      background:var(--surface); border-radius:var(--radius);
+      overflow:hidden; box-shadow:var(--shadow);
+      transition:transform var(--transition),box-shadow var(--transition);
+      text-decoration:none; color:inherit; cursor:pointer;
+      isolation:isolate;
+    }
+
+    /* Disabled card tweaks */
+    .card--disabled{
+      pointer-events:none;          /* truly non-interactive */
+      cursor:default;
+      filter:grayscale(.8);         /* tasteful visual cue */
+      opacity:.65;
+    }
+    .card--disabled:hover{
+      transform:none;               /* kill hover lift */
+      box-shadow:var(--shadow);     /* keep base shadow */
+    }
+
+    /* Responsive columns */
+    @media(max-width:1179px){.card{flex:0 1 calc(33.333% - 2rem);max-width:calc(33.333% - 2rem);} }
+    @media(max-width:899px){ .card{flex:0 1 calc(50% - 2rem);  max-width:calc(50% - 2rem);} }
+    @media(max-width:599px){ .card{flex:0 1 100%;             max-width:100%;} }
+
+    .card:hover:not(.disabled){transform:translateY(-4px);box-shadow:var(--shadow-hover);} /* only animate if clickable */
+
+    /* Image */
+    .image-wrapper{aspect-ratio:16/9;overflow:hidden;background:#dfe6ef;}
+    .image-wrapper img{width:100%;height:100%;object-fit:cover;display:block;}
+
+    /* Body */
+    .card-body{padding:1.75rem 1.75rem 2rem;display:flex;flex-direction:column;gap:1rem;flex:1;}
+    .card-body h2{font-size:1.35rem;color:var(--text-dark);}
+    .card-body .desc{color:var(--text-light);}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>Watchtower – Tools</h1>
+      <p class="lead">Choose a module to get started.</p>
+    </header>
+
+    {% if modules %}
+    <section class="module-grid">
+      {% for mod in modules %}
+        {% if mod.clickable is not defined or mod.clickable %}
+          <a href="{{ mod.url }}" class="card">
+        {% else %}
+          <div class="card card--disabled" aria-disabled="true">
+        {% endif %}
+
+            {% if mod.image %}
+            <div class="image-wrapper">
+              <img src="{{ mod.image }}" alt="{{ mod.name }} screenshot" loading="lazy" />
+            </div>
+            {% endif %}
+
+            <div class="card-body">
+              <h2>{{ mod.name }}</h2>
+              {% if mod.description %}<p class="desc">{{ mod.description }}</p>{% endif %}
+            </div>
+
+        {% if mod.clickable is not defined or mod.clickable %}
+          </a>
+        {% else %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </section>
+    {% else %}
+      <p style="text-align:center;color:var(--text-light);">No modules registered yet.</p>
+    {% endif %}
+  </main>
+
+  <!-- Equal-Height Cards —————————— -->
+  <script>
+    function setUniformCardHeights () {
+      const cards = document.querySelectorAll('.card');
+      if (!cards.length) return;
+
+      // Reset any previous inline height so natural height can be read
+      cards.forEach(c => c.style.height = 'auto');
+
+      // Find tallest card
+      let max = 0;
+      cards.forEach(c => { max = Math.max(max, c.offsetHeight); });
+
+      // Apply tallest height to everyone
+      cards.forEach(c => c.style.height = max + 'px');
+    }
+
+    // Run on load + after every resize (debounced for performance)
+    window.addEventListener('load', setUniformCardHeights);
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(setUniformCardHeights, 150);
+    });
+  </script>
+</body>
+</html>
