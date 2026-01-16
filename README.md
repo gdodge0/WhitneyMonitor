@@ -8,14 +8,14 @@ WhitneyMonitor is a **modular permit-monitoring & notification framework** origi
 
 ## Features
 
-* 🔌 **Pluggable architecture** – drop new monitor or notification providers under `providers/` and declare them in *conf.yaml*.
-* 🕵️ **Async monitoring loop** driven by `asyncio` – hundreds of requests per second without blocking.
-* 📈 Built-in *Statistics* & *Core* blueprints exposing runtime info via Flask.
-* 🌐 **Web UI** autoloads every active blueprint and renders a navigation hub.
-* 🪄 **Tool system** – each monitor can ship Flask/Celery powered tools (e.g. *InyoATC* one-click “Add-To-Cart”).
-* 🔔 **Notification fan-out** with provider-specific payload parsers (Discord out-of-the-box).
-* 🔐 **AES-GCM token service** allows secure, stateless actions (tokens embed JSON payload + TTL).
-* 🐳 **Docker-first** workflow – run the whole stack with a couple of containers.
+* **Pluggable architecture** – drop new monitor or notification providers under `providers/` and declare them in *conf.yaml*.
+* **Async monitoring loop** driven by `asyncio` – hundreds of requests per second without blocking.
+* Built-in *Statistics* & *Core* blueprints exposing runtime info via Flask.
+* **Web UI** autoloads every active blueprint and renders a navigation hub.
+* **Tool system** – each monitor can ship Flask/Celery powered tools (e.g. *InyoATC* one-click “Add-To-Cart”).
+* **Notification fan-out** with provider-specific payload parsers (Discord out-of-the-box).
+* **AES-GCM token service** allows secure, stateless actions (tokens embed JSON payload + TTL).
+* **Docker-first** workflow – run the whole stack with a couple of containers.
 
 ---
 
