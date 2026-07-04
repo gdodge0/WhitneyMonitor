@@ -15,6 +15,7 @@ sqlite:
 monitor:
   providers:
     - Whitney
+    - OneHome
   whitney:
     cooldown: 15 # seconds
     api_endpoint: "https://www.recreation.gov/api/permitinyo/445860/availabilityv2"
@@ -63,6 +64,50 @@ monitor:
     Harvester: # required for Whitney ATC
       name: "ReCaptcha Harvester"
       url_prefix: "/whitney/api"
+
+  # OneHome real-estate listings monitor.
+  # All search filters below are configurable — nothing is hardcoded.
+  onehome:
+    cooldown: 60 # seconds
+    graphql_url: "https://services.onehome.com/graphql?GetListings"
+    # Durable credential: the share/email token from a OneHome portal link.
+    # The monitor mints a short-lived Bearer JWT from it via checkToken and
+    # refreshes automatically on expiry.
+    share_token: "${ONEHOME_SHARE_TOKEN}"
+    check_token_url: "https://services.onehome.com/api/authentication/checkToken"
+    token_ttl: 1500                          # seconds; proactively re-mint the JWT past this age
+    listing_type: "FOR_RENT"                 # or FOR_SALE, etc.
+    beds:  { min: 4, max: 1000000 }
+    baths: { min: 4, max: 1000000 }
+    property_types:
+      - House
+      - Apartment
+      - Condo
+      - Townhouse
+    state: "CA"
+    city_terms:                              # matched against City / PostalCity /
+      - "Example City"                       #   SubdivisionName / CityRegion / CountyOrParish
+    page_size: 25
+    max_pages: 10
+    polygon:                                 # bounding box as [latitude, longitude] pairs — replace with your own
+      - [ 34.00000000000000, -118.00000000000000 ]
+      - [ 33.90000000000000, -118.00000000000000 ]
+      - [ 33.90000000000000, -118.10000000000000 ]
+      - [ 34.00000000000000, -118.10000000000000 ]
+    # Portal property URL. str.format-friendly; {id} is the GraphQL id (already
+    # of the form "aotf~<num>~<MLS>", the full path segment) and {token} is the
+    # URL-encoded share_token, injected automatically so the link is viewable.
+    listing_url_template: "https://portal.onehome.com/en-US/property/{id}?token={token}"
+    data_dir: "data/onehome"
+    data_file: "listings.p"
+    notifications:
+      providers:
+        - Discord
+      discord:
+        event_hook: "${DISCORD_ONEHOME_HOOK}"  # Webhook for listing alerts
+        log_hook: ""                            # Webhook for application logs
+        role_id: ~                              # “~” = YAML null (no role ping)
+        enable_logs: true
 
 service:
   base_url: "http://127.0.0.1:8000"

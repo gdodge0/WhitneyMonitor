@@ -431,20 +431,21 @@ class Config:
                 raise ValueError(f"Provider '{name}' must list notifications.providers")
 
             # targets -------------------------------------------------
-            tgt_list = block.get("targets")
-            if not tgt_list:
-                raise ValueError(f"Provider '{name}' must define 'targets'")
-            if not isinstance(tgt_list, (list, tuple)):
-                raise ValueError(f"Provider '{name}'.targets must be a list of mappings")
+            # `targets` is a recreation.gov date-range concept; not every
+            # monitor needs it (e.g. listing monitors). Validate only when present.
+            if "targets" in block:
+                tgt_list = block.get("targets")
+                if not isinstance(tgt_list, (list, tuple)):
+                    raise ValueError(f"Provider '{name}'.targets must be a list of mappings")
 
-            for idx, item in enumerate(tgt_list):
-                if not (isinstance(item, dict) and len(item) == 1):
-                    raise ValueError(f"Provider '{name}' targets[{idx}] must be single‑key mapping")
-                target_id, ranges_yaml = next(iter(item.items()))
-                try:
-                    DateRanges(ranges_yaml or [])
-                except ValueError as e:
-                    raise ValueError(f"Provider '{name}' target '{target_id}': {e}") from e
+                for idx, item in enumerate(tgt_list):
+                    if not (isinstance(item, dict) and len(item) == 1):
+                        raise ValueError(f"Provider '{name}' targets[{idx}] must be single‑key mapping")
+                    target_id, ranges_yaml = next(iter(item.items()))
+                    try:
+                        DateRanges(ranges_yaml or [])
+                    except ValueError as e:
+                        raise ValueError(f"Provider '{name}' target '{target_id}': {e}") from e
 
             providers[name] = MonitorProvider(name, block)
 
