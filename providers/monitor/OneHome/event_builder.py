@@ -27,7 +27,8 @@ class OneHomeEventBuilder:
         self._enc_token = urllib.parse.quote(share_token, safe="") if share_token else ""
         self.version = version
 
-    def _url_for(self, row: Dict[str, Any]) -> Optional[str]:
+    def url_for(self, row: Dict[str, Any]) -> Optional[str]:
+        """Build a viewable listing URL from the template + URL-encoded token."""
         if not self.listing_url_template:
             return None
         try:
@@ -41,7 +42,7 @@ class OneHomeEventBuilder:
                 change_type=row["change_type"],
                 listing_id=row.get("listing_id") or row.get("id", ""),
                 address=row.get("address", ""),
-                listing_url=self._url_for(row),
+                listing_url=self.url_for(row),
                 photo_url=row.get("photo_url"),
                 price=row.get("price"),
                 old_price=row.get("old_price"),

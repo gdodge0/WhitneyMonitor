@@ -35,12 +35,15 @@ class DiscordNotificationProvider(BaseNotificationProvider):
         for p in payloads:
             fire_and_forget("POST", url=self.cfg["event_hook"], json=p)
 
-    def send_log(self, meta: Any) -> None:  # type: ignore[override]
+    def send_log(self, meta: Any):  # type: ignore[override]
+        """Post a log line to the log webhook. Returns the fire-and-forget
+        ``asyncio.Task`` (or ``None`` if logging is disabled) so callers can
+        await the flush when needed (e.g. on teardown)."""
         if not (self.cfg.get("enable_logs") and self.cfg.get("log_hook")):
-            return
+            return None
         content = (
             f"```json\n{json.dumps(meta, indent=2)}```"
             if isinstance(meta, (dict, list))
             else str(meta)
         )
-        fire_and_forget("POST", url=self.cfg["log_hook"], json={"content": content})
+        return fire_and_forget("POST", url=self.cfg["log_hook"], json={"content": content})

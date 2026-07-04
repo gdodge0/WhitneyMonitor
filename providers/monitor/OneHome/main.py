@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Dict, List, Optional
 
 from lib import config
@@ -10,6 +11,15 @@ from .auth import DEFAULT_CHECK_TOKEN_URL, OneHomeAuth
 from .differ import ListingsDiffer
 from .event_builder import OneHomeEventBuilder
 from .http import fetch_listings
+
+# Discord's message content cap is 2000 chars; stay under it with margin.
+_LOG_CHAR_LIMIT = 1900
+_BURST_HEADER = "<Initial Burst>, Saw:"
+_BURST_CONT_HEADER = "<Initial Burst> (cont.):"
+
+
+def _fmt_price(value: Any) -> str:
+    return f"${value:,.0f}" if isinstance(value, (int, float)) else "N/A"
 
 
 def _address(prop: Dict[str, Any]) -> str:
@@ -94,8 +104,57 @@ class OneHomeMonitorProvider(BaseMonitorProvider):
             version="1.0.0",
         )
 
+    # ---- logging helpers -------------------------------------------------
+    def _log(self, message: str) -> List[Any]:
+        """Fire a log line at every log provider; return the scheduled tasks."""
+        tasks: List[Any] = []
+        for lp in self.log_providers:
+            task = lp.send_log(message)
+            if task is not None:
+                tasks.append(task)
+        return tasks
+
+    @staticmethod
+    def _burst_messages(lines: List[str]) -> List[str]:
+        """Pack burst lines into Discord-sized messages (header on each part)."""
+        messages: List[str] = []
+        header = _BURST_HEADER
+        current = header
+        for line in lines:
+            if len(current) + 1 + len(line) > _LOG_CHAR_LIMIT:
+                messages.append(current)
+                header = _BURST_CONT_HEADER
+                current = f"{header}\n{line}"
+            else:
+                current = f"{current}\n{line}"
+        messages.append(current)
+        return messages
+
+    def _log_initial_burst(self, snapshot: Dict[str, Dict[str, Any]]) -> None:
+        lines = [
+            f"{self.builder.url_for(row) or '(no url)'} - {row.get('address') or 'unknown address'} - {_fmt_price(row.get('price'))}"
+            for row in snapshot.values()
+        ]
+        if not lines:
+            return
+        for message in self._burst_messages(lines):
+            self._log(message)
+
     async def load(self):
         await self.data.load()
+        tracked = len(self.data)
+        state = f"resuming with {tracked} tracked listing(s)" if tracked else "cold start (no baseline yet)"
+        self._log(
+            f"🟢 OneHome monitor started — {state}. "
+            f"listing_type={self.cfg.raw.get('listing_type')}, "
+            f"cities={self.cfg.raw.get('city_terms')}, cooldown={self.cfg.cooldown}s"
+        )
+
+    async def teardown(self):
+        tasks = self._log("🔴 OneHome monitor stopped")
+        if tasks:
+            # Await the flush so the log actually sends before the loop closes.
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def run_once(self):
         listings, errors = await fetch_listings(
@@ -106,16 +165,23 @@ class OneHomeMonitorProvider(BaseMonitorProvider):
         )
 
         for err in errors:
-            for lp in self.log_providers:
-                lp.send_notification(f"OneHome fetch error: {err}")
+            self._log(f"⚠️ OneHome request error: {err}"[:_LOG_CHAR_LIMIT])
 
         # If the fetch wholly failed (no listings and errors present), don't let
         # the differ treat an empty result as "everything delisted".
         if not listings and errors:
             return
 
+        # Cold start: capture it before diff() seeds the baseline, so we can log
+        # the initial burst of everything currently visible.
+        is_cold_start = len(self.data) == 0
+
         snapshot = _snapshot_from_listings(listings)
         changes = self.differ.diff(snapshot)
+
+        if is_cold_start:
+            self._log_initial_burst(snapshot)
+
         if not changes:
             return
 

@@ -15,3 +15,6 @@ class BaseMonitorProvider:
 
     async def run_once(self):
         raise NotImplementedError("This Provider Does not Implement run_once")
+
+    async def teardown(self):
+        pass  # Optional. Called once when the monitor loop exits (shutdown/cancel).
