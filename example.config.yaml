@@ -77,6 +77,7 @@ monitor:
     check_token_url: "https://services.onehome.com/api/authentication/checkToken"
     token_ttl: 1500                          # seconds; proactively re-mint the JWT past this age
     listing_type: "FOR_RENT"                 # or FOR_SALE, etc.
+    price: { min: 0, max: 1000000000 }       # ListPrice filter (monthly rent / sale price); set max to your budget
     beds:  { min: 4, max: 1000000 }
     baths: { min: 4, max: 1000000 }
     property_types:

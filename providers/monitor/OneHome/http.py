@@ -102,9 +102,15 @@ def build_browse_parameter(cfg: Dict[str, Any], *, page_num: int = 0) -> Dict[st
     """
     beds = cfg.get("beds", {}) or {}
     baths = cfg.get("baths", {}) or {}
+    price = cfg.get("price", {}) or {}
 
     search_query: List[Dict[str, Any]] = [
         {"type": "LISTING_TYPE", "fieldName": "", "values": [cfg["listing_type"]]},
+        {
+            "type": "RANGE",
+            "fieldName": "property.ListPrice",
+            "values": [str(price.get("min", 0)), str(price.get("max", 1000000000))],
+        },
         {
             "type": "RANGE",
             "fieldName": "property.BedroomsTotal",
