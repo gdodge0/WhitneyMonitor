@@ -212,15 +212,6 @@ tools/
 
 ---
 
-## Roadmap / TODO
-
-* [ ] Add test-suite & CI workflow.
-* [ ] Compose file & Terraform examples.
-* [ ] More notification back-ends (Ntfy, Email).
-* [ ] Option to persist snapshots in PostgreSQL instead of pickle.
-
----
-
 ## License
 
 MIT – see `LICENSE` for full text. 
